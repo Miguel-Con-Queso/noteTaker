@@ -1,54 +1,64 @@
 const fs = require('fs');
 const path = require('path');
+const router = require('express').Router();
+const { v4: uuidv4 } = require('uuid');
 
-module.exports = app => {
+// api routes
 
+// get all notes
+router.get('/api/notes', (request, response) => {
     fs.readFile('db/db.json', 'utf8', (err, data) => {
+        if (err) throw err;
+        response.json(JSON.parse(data));
+    })
+})
+
+// create a new note
+router.post('/api/notes', (request, response) => {
     
-        // error handling
+    const newNote = {
+        title: request.body.title,
+        text: request.body.text,
+        id: uuidv4()
+    }
+
+    return fs.readFile('db/db.json', 'utf8', (err, data) => {
+        if (err) throw err;
+        const notes = JSON.parse(data);
+        notes.push(newNote);
+
+        fs.writeFile('db/db.json', JSON.stringify(notes), () => {
+            response.json(true);
+        })
+    })
+})
+
+// delete a note
+router.delete('/api/notes/:id', (request, response) => {
+    const id = request.params.id;
+
+    return fs.readFile('db/db.json', 'utf8', (err, data) => {
         if (err) throw err;
 
-        var notes = JSON.parse(data);
+        const notes = JSON.parse(data);
+        const deleteNote = notes.filter(note => id !== note.id)
 
-        // api routes
-        app.get('/api/notes', function(request, response) {
+        fs.writeFile('db/db.json', JSON.stringify(deleteNote), () => {
+            response.json(true);
+        })
+    })
+})
 
-            response.json(notes);
-        });
+// // HTML routes
 
-        app.get('api/notes/:id', function(request, response) {
+// // get notes page
+// router.get('/notes', (request, response) => {
+//     response.sendFile(path.join(__dirname,'../../public/notes.html'))
+// })
 
-            response.json(notes[request.params.id]);
-        });
+// // get main page
+// router.get('/', (request, response) => {
+//     response.sendFile(path.join(__dirname,'../../public/index.html'))
+// })
 
-        app.post('/api/notes', function(request, response) {
-
-            let newNote = request.body;
-            notes.push(newNote);
-            updateDb();
-            return console.log(newNote.title + ' added to notes list');
-        });
-
-        app.delete('/api/notes/:id', function(request, response) {
-            notes.splice(request.params.id, 1);
-            updateDb();
-            console.log(request.params.id + ' deleted');
-        });
-
-        // view routes
-        app.get('/notes', function(request, response) {
-            response.sendFile(path.join(__dirname, '../../public/notes.html'));
-        });
-
-        app.get('*', function(request, response) {
-            response.sendFile(path.join(__dirname, '../../public/index.html'));
-        });
-
-        function updateDb() {
-            fs.writeFile('db/db.json', JSON.stringify(notes), err => {
-                if (err) throw err;
-                return true;
-            });
-        }
-    });
-};
+module.exports = router;
